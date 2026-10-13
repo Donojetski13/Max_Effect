@@ -8,8 +8,9 @@ Contains effect types, parameters, and preset definitions
 #ifndef PEDAL_TYPE_H
 #define PEDAL_TYPE_H
 #include <stdint.h>
+#include <stdbool.h>
 
-
+const int NUM_EFFECTS = 6; /*Number of effects supported by the pedal*/
 /*Audio effects supported by the pedal*/
 typedef enum{
    E_BYPASS,
@@ -20,6 +21,14 @@ typedef enum{
    E_WAH
 } effect;
 
+/*Effect parameters. Settings vary by effect type*/
+typedef struct{
+   bool enabled;
+   float gain;
+   float setting1;
+   float setting2;
+   float setting3;
+} params;
 
 /*Distortion effect parameters*/
 typedef struct{
@@ -75,5 +84,9 @@ typedef struct{
    wah_params wah;
 } preset;
 
-
+// Effect chain struct 
+typedef struct {
+    effect e;
+    params p;
+} effect_pair;
 #endif
