@@ -1,1 +1,3 @@
-# gitingore file
+# gitignore file
+*.o
+main
