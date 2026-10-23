@@ -2,12 +2,20 @@
 #include <stdio.h>
 #include "UI_headers/tuner.h"
 #include "UI_headers/pedal_effect.h"
+#include "UI_headers/audio_codec.h"
 
 int chain_length = 0; // Current length of the effect chain
-
+// #define RELEASE
+// #define TUNER
+//#define PEDAL_EFFECTS
+// #define SCREEN
+#define CODEC
 
 int main() {
+    /* USER CODE BEGIN 2 */
     effect_pair effect_chain[NUM_EFFECTS];
+
+    //  pitch_detection_demo();
 
     // tuning and pitch detection
     /* Performance considerations
@@ -18,111 +26,82 @@ int main() {
     - Autocorrelation: Robust to noise
     - Combine methods for better accuracy
     */
-    printf("Music Pitch Detection using FFT\n");
-    printf("================================\n\n");
-    
-    double sample_rate = 44100; // base on ADC sample rate
-    int n = 4096;
-    complex_t* signal = allocate_complex_array(n);
-    complex_t* spectrum = allocate_complex_array(n);
-    
-    // Test 1: Pure sine wave
-    printf("Test 1: Pure Sine Wave (A4 = 440 Hz)\n");
-    printf("------------------------------------\n");
-    
-    for (int i = 0; i < n; i++) {
-        signal[i] = sin(2 * PI * 440 * i / sample_rate);
+    double sample_rate = 66666.67; // base on ADC sample rate(1MHz, 12b resolution, 2.5 cycles/sample) = 66666.67 Hz
+    int n_tune = 1024, n_effects = 8; // signal length/chunks
+    complex_t *effect_signal = allocate_complex_array(n_effects);
+    complex_t *tune_signal = allocate_complex_array(n_tune);
+
+    #ifdef CODEC
+    // Initialize the audio codec
+    if (!codec_init()) {
+        printf("Codec initialization failed!\n");
+        return -1;
     }
     
-    pitch_result_t result = detect_pitch_with_confidence(signal, n, sample_rate);
-    printf("Detected pitch: %.2f Hz\n", result.frequency);
-    printf("Musical note: %s\n", result.note);
-    printf("Confidence: %.1f%%\n\n", result.confidence * 100);
-    
-    // Test 2: Complex tone with harmonics
-    printf("Test 2: Complex Tone (E4 with harmonics)\n");
-    printf("----------------------------------------\n");
-    
-    double harmonic_amps[] = {1.0, 0.5, 0.3, 0.2, 0.1};
-    generate_musical_note(signal, n, 329.63, sample_rate, 5, harmonic_amps);
-    
-    result = detect_pitch_with_confidence(signal, n, sample_rate);
-    printf("Detected pitch: %.2f Hz\n", result.frequency);
-    printf("Musical note: %s\n", result.note);
-    printf("Confidence: %.1f%%\n\n", result.confidence * 100);
-    
-    // Test 3: Chord detection (challenging)
-    printf("Test 3: C Major Chord (C4, E4, G4)\n");
-    printf("-----------------------------------\n");
-    
-    for (int i = 0; i < n; i++) {
-        signal[i] = sin(2 * PI * 261.63 * i / sample_rate) +  // C4
-                   sin(2 * PI * 329.63 * i / sample_rate) +   // E4
-                   sin(2 * PI * 392.00 * i / sample_rate);    // G4
-    }
-    
+    codec_set_intput_gain(1.0f); // Set input gain (example value, adjust as needed)
+    #endif
+    /* USER CODE END 2 */
+
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    while (1)
+    {
+    #ifdef TUNER
+    printf("\nGetting signal...\n");
+    // ADC value to complex_t array conversion
+    get_input_signal(tune_signal, n_tune);
+    printf("\nProcessing signal...\n");
     // Apply window to reduce spectral leakage
-    apply_window_hann(signal, n);
-    
-    result = detect_pitch_with_confidence(signal, n, sample_rate);
-    printf("Detected pitch: %.2f Hz\n", result.frequency);
-    printf("Musical note: %s\n", result.note);
-    printf("Confidence: %.1f%%\n", result.confidence * 100);
-    printf("(Note: Chord detection is challenging - usually detects root note)\n\n");
-    
-    // Test 4: Noisy signal
-    printf("Test 4: Noisy Signal (A4 with 20%% noise)\n");
-    printf("-----------------------------------------\n");
-    
-    for (int i = 0; i < n; i++) {
-        signal[i] = sin(2 * PI * 440 * i / sample_rate) + 
-                   0.2 * ((double)rand() / RAND_MAX - 0.5);
-    }
-    
-    result = detect_pitch_with_confidence(signal, n, sample_rate);
-    printf("Detected pitch: %.2f Hz\n", result.frequency);
-    printf("Musical note: %s\n", result.note);
-    printf("Confidence: %.1f%%\n\n", result.confidence * 100);
-    
-    while (1) {
-        // Compare pitch detection methods
-        printf("Method Comparison:\n");
-        printf("==================\n");
-        
-        // read adc input or generate test signal
-        generate_musical_note(signal, n, 220, sample_rate, 3, NULL);  // A3
+    //	  apply_window_hann(signal, n);
 
-        // // ADC value to complex_t array conversion
-        // // (Assuming mono input, real part = ADC value, imaginary part = 0)
-        // for (int i = 0; i < n; i++) {
-        //     signal[i] = /*ADC value*/;  // Already generated as real values
-        // }
+    // Process signal with FFT
+    //	  memcpy(spectrum, signal, n * sizeof(complex_t));
+    radix2_dif_fft(tune_signal, n_tune, FFT_FORWARD);
 
-        // Apply window to reduce spectral leakage
-        apply_window_hann(signal, n);
-        
-        // Process signal with FFT
-        memcpy(spectrum, signal, n * sizeof(complex_t));
-        radix2_dif_fft(spectrum, n, FFT_FORWARD);
-        
-        double pitch_peak = detect_pitch_peak(spectrum, n, sample_rate);
-        double pitch_hps = detect_pitch_hps(spectrum, n, sample_rate, 5);
-        double pitch_autocorr = detect_pitch_autocorr(signal, n, sample_rate);
-        
-        printf("True frequency: 220.00 Hz (A3)\n");
-        printf("Peak detection: %.2f Hz (error: %.2f Hz)\n", 
-            pitch_peak, pitch_peak - 220);
-        printf("HPS method: %.2f Hz (error: %.2f Hz)\n", 
-            pitch_hps, pitch_hps - 220);
-        printf("Autocorrelation: %.2f Hz (error: %.2f Hz)\n", 
-            pitch_autocorr, pitch_autocorr - 220);
+    printf("\nGetting frequency...\n");
+    double pitch_hps = detect_pitch_hps(tune_signal, n_tune, sample_rate, 3);
+    //	  double pitch_autocorr = detect_pitch_autocorr(signal, n, sample_rate);
 
-        // ... (code for tuning)
-        printf(frequency_to_note_name(pitch_peak));
-    }
-    
-    free_complex_array(signal);
-    free_complex_array(spectrum);
+    //	  printf("True frequency: 440.00 Hz (A4)\n");
+    printf("HPS method: %.2f Hz\n", pitch_hps);
+    //	  printf("Autocorrelation: %.2f Hz (error: %.2f Hz)\n",
+    //		  pitch_autocorr, pitch_autocorr - 440);
 
+    // code for tuning)
+    printf(frequency_to_note_name(pitch_hps));
+    //	  HAL_Delay(1);
+    #endif
+
+    #ifdef PEDAL_EFFECTS
+    printf("\nGetting signal...\n");
+    get_input_signal(effect_signal, n_effects);
+    printf("\nAdding effects...\n");
+    // Example: Add effects to the chain
+    params distortion_params = {true, 0.8f, 0.5f, 0.7f}; // Example distortion parameters
+    chain_length = add_effect(E_DISTORTION, distortion_params, effect_chain, chain_length);
+
+    // Apply the effect chain to the signal
+    printf("\nApplying effect chain...\n");
+    apply_effect_chain(effect_signal, n_effects, effect_chain, chain_length);
+
+    // Output the processed signal (implementation depends on hardware)
+    printf("\nOutputting signal...\n");
+    output2codec(effect_signal, n_effects);
+    #endif
+
+    #ifdef CODEC
+    // Get input signal from ADC
+    get_input_signal(effect_signal, n_effects);
+
+    // send signal to codec for output (testing no effects latency)
+    output2codec(effect_signal, n_effects);
+    #endif
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  free_complex_array(tune_signal);
+  free_complex_array(effect_signal);
+  /* USER CODE END 3 */
     return 0;
 }
