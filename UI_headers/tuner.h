@@ -16,7 +16,9 @@ typedef struct {
     double frequency; // Frequency in Hz
 } musical_note;
 
-musical_note notes[] = { // notes for comparison for bass (4/5/6 string) and guitar
+// notes for comparison for bass (4/5/6 string) and guitar strings not frets
+// can add more
+musical_note notes[] = {
 	{"B0", 30.87}, {"E1", 41.20}, {"A1", 55.00},
 	{"E2", 82.41}, {"G2", 98.00}, {"A2", 110.00},
 	{"C3", 130.81},{"D3", 146.83},{"G3", 196.00},
@@ -71,40 +73,40 @@ void apply_window_blackman(complex_t* signal, int n) {
         signal[i] *= window;
     }
 }
-
-// Simple peak detection for fundamental frequency bass and guitar
-double detect_pitch_peak(complex_t* spectrum, int n, double sample_rate) {
-    double* magnitude = compute_magnitude(spectrum, n);
-
-    // Find peak in reasonable frequency range (80-2000 Hz)
-    int min_bin = (int)(80 * n / sample_rate);
-    int max_bin = (int)(2000 * n / sample_rate);
-    if (max_bin > n/2) max_bin = n/2;
-
-    double max_mag = 0;
-    int peak_bin = 0;
-
-    for (int i = min_bin; i < max_bin; i++) {
-        if (magnitude[i] > max_mag) {
-            max_mag = magnitude[i];
-            peak_bin = i;
-        }
-    }
-
-    // Quadratic interpolation for more accurate frequency
-    if (peak_bin > 0 && peak_bin < n/2 - 1) {
-        double y1 = magnitude[peak_bin - 1];
-        double y2 = magnitude[peak_bin];
-        double y3 = magnitude[peak_bin + 1];
-
-        double delta = 0.5 * (y1 - y3) / (y1 - 2*y2 + y3);
-        peak_bin += delta;
-    }
-
-    free(magnitude);
-
-    return peak_bin * sample_rate / n;
-}
+//
+//// Simple peak detection for fundamental frequency bass and guitar
+//double detect_pitch_peak(complex_t* spectrum, int n, double sample_rate) {
+//    double* magnitude = compute_magnitude(spectrum, n);
+//
+//    // Find peak in reasonable frequency range (80-2000 Hz)
+//    int min_bin = (int)(80 * n / sample_rate);
+//    int max_bin = (int)(2000 * n / sample_rate);
+//    if (max_bin > n/2) max_bin = n/2;
+//
+//    double max_mag = 0;
+//    int peak_bin = 0;
+//
+//    for (int i = min_bin; i < max_bin; i++) {
+//        if (magnitude[i] > max_mag) {
+//            max_mag = magnitude[i];
+//            peak_bin = i;
+//        }
+//    }
+//
+//    // Quadratic interpolation for more accurate frequency
+//    if (peak_bin > 0 && peak_bin < n/2 - 1) {
+//        double y1 = magnitude[peak_bin - 1];
+//        double y2 = magnitude[peak_bin];
+//        double y3 = magnitude[peak_bin + 1];
+//
+//        double delta = 0.5 * (y1 - y3) / (y1 - 2*y2 + y3);
+//        peak_bin += delta;
+//    }
+//
+//    free(magnitude);
+//
+//    return peak_bin * sample_rate / n;
+//}
 
 // Harmonic Product Spectrum (HPS) method (80-1500 Hz)
 double detect_pitch_hps(complex_t* spectrum, int n, double sample_rate, int harmonics) {
@@ -186,49 +188,49 @@ double detect_pitch_autocorr(complex_t* signal, int n, double sample_rate) {
     return 0;
 }
 
-// Pitch detection with confidence estimation
-typedef struct {
-    double frequency;
-    double confidence;
-    const char* note;
-    double cents_off;
-} pitch_result_t;
-
-pitch_result_t detect_pitch_with_confidence(complex_t* signal, int n, double sample_rate) {
-    pitch_result_t result = {0};
-
-    // Method 1: Peak detection
-    complex_t* spectrum = allocate_complex_array(n);
-    memcpy(spectrum, signal, n * sizeof(complex_t));
-    radix2_dif_fft(spectrum, n, FFT_FORWARD);
-
-    double pitch1 = detect_pitch_peak(spectrum, n, sample_rate);
-
-    // Method 2: HPS
-    double pitch2 = detect_pitch_hps(spectrum, n, sample_rate, 5);
-
-    // Method 3: Autocorrelation
-    double pitch3 = detect_pitch_autocorr(signal, n, sample_rate);
-
-    // Combine results
-    result.frequency = pitch2;  // HPS is often most reliable
-
-    // Estimate confidence based on agreement between methods
-    double avg_pitch = (pitch1 + pitch2 + pitch3) / 3;
-    double variance = pow(pitch1 - avg_pitch, 2) +
-                     pow(pitch2 - avg_pitch, 2) +
-                     pow(pitch3 - avg_pitch, 2);
-    variance /= 3;
-
-    result.confidence = 1.0 / (1.0 + sqrt(variance) / avg_pitch);
-
-    // Find musical note
-    result.note = frequency_to_note_name(result.frequency);
-
-    free_complex_array(spectrum);
-
-    return result;
-}
+//// Pitch detection with confidence estimation
+//typedef struct {
+//    double frequency;
+//    double confidence;
+//    const char* note;
+//    double cents_off;
+//} pitch_result_t;
+//
+//pitch_result_t detect_pitch_with_confidence(complex_t* signal, int n, double sample_rate) {
+//    pitch_result_t result = {0};
+//
+//    // Method 1: Peak detection
+//    complex_t* spectrum = allocate_complex_array(n);
+//    memcpy(spectrum, signal, n * sizeof(complex_t));
+//    radix2_dif_fft(spectrum, n, FFT_FORWARD);
+//
+//    double pitch1 = detect_pitch_peak(spectrum, n, sample_rate);
+//
+//    // Method 2: HPS
+//    double pitch2 = detect_pitch_hps(spectrum, n, sample_rate, 5);
+//
+//    // Method 3: Autocorrelation
+//    double pitch3 = detect_pitch_autocorr(signal, n, sample_rate);
+//
+//    // Combine results
+//    result.frequency = pitch2;  // HPS is often most reliable
+//
+//    // Estimate confidence based on agreement between methods
+//    double avg_pitch = (pitch1 + pitch2 + pitch3) / 3;
+//    double variance = pow(pitch1 - avg_pitch, 2) +
+//                     pow(pitch2 - avg_pitch, 2) +
+//                     pow(pitch3 - avg_pitch, 2);
+//    variance /= 3;
+//
+//    result.confidence = 1.0 / (1.0 + sqrt(variance) / avg_pitch);
+//
+//    // Find musical note
+//    result.note = frequency_to_note_name(result.frequency);
+//
+//    free_complex_array(spectrum);
+//
+//    return result;
+//}
 
 // Generate test signals
 void generate_musical_note(complex_t* signal, int n, double freq, double sample_rate,
@@ -242,74 +244,74 @@ void generate_musical_note(complex_t* signal, int n, double freq, double sample_
         }
     }
 }
-
-void pitch_detection_demo() {
-	printf("Music Pitch Detection using FFT\n");
-	printf("================================\n\n");
-
-	double sample_rate = 66666.67; // base on ADC sample rate(1MHz, 12b resolution, 2.5 cycles/sample) = 66666.67 Hz
-	int n = 1024;
-	complex_t* signal = allocate_complex_array(n);
-
-	// Test 1: Pure sine wave
-	printf("Test 1: Pure Sine Wave (A4 = 440 Hz)\n");
-	printf("------------------------------------\n");
-
-	for (int i = 0; i < n; i++) {
-	  signal[i] = sin(2 * PI * 440 * i / sample_rate);
-	}
-
-	pitch_result_t result = detect_pitch_with_confidence(signal, n, sample_rate);
-	printf("Detected pitch: %.2f Hz\n", result.frequency);
-	printf("Musical note: %s\n", result.note);
-	printf("Confidence: %.1f%%\n\n", result.confidence * 100);
-
-	// Test 2: Complex tone with harmonics
-	printf("Test 2: Complex Tone (E4 with harmonics)\n");
-	printf("----------------------------------------\n");
-
-	double harmonic_amps[] = {1.0, 0.5, 0.3, 0.2, 0.1};
-	generate_musical_note(signal, n, 329.63, sample_rate, 5, harmonic_amps);
-
-	result = detect_pitch_with_confidence(signal, n, sample_rate);
-	printf("Detected pitch: %.2f Hz\n", result.frequency);
-	printf("Musical note: %s\n", result.note);
-	printf("Confidence: %.1f%%\n\n", result.confidence * 100);
-
-	// Test 3: Chord detection (challenging)
-	printf("Test 3: C Major Chord (C4, E4, G4)\n");
-	printf("-----------------------------------\n");
-
-	for (int i = 0; i < n; i++) {
-	  signal[i] = sin(2 * PI * 261.63 * i / sample_rate) +  // C4
-				 sin(2 * PI * 329.63 * i / sample_rate) +   // E4
-				 sin(2 * PI * 392.00 * i / sample_rate);    // G4
-	}
-
-	// Apply window to reduce spectral leakage
-	apply_window_hann(signal, n);
-
-	result = detect_pitch_with_confidence(signal, n, sample_rate);
-	printf("Detected pitch: %.2f Hz\n", result.frequency);
-	printf("Musical note: %s\n", result.note);
-	printf("Confidence: %.1f%%\n", result.confidence * 100);
-	printf("(Note: Chord detection is challenging - usually detects root note)\n\n");
-
-	// Test 4: Noisy signal
-	printf("Test 4: Noisy Signal (A4 with 20%% noise)\n");
-	printf("-----------------------------------------\n");
-
-	for (int i = 0; i < n; i++) {
-	  signal[i] = sin(2 * PI * 440 * i / sample_rate) +
-				 0.2 * ((double)rand() / RAND_MAX - 0.5);
-	}
-
-	result = detect_pitch_with_confidence(signal, n, sample_rate);
-	printf("Detected pitch: %.2f Hz\n", result.frequency);
-	printf("Musical note: %s\n", result.note);
-	printf("Confidence: %.1f%%\n\n", result.confidence * 100);
-
-	free_complex_array(signal);
-}
+//
+//void pitch_detection_demo() {
+//	printf("Music Pitch Detection using FFT\n");
+//	printf("================================\n\n");
+//
+//	double sample_rate = 66666.67; // base on ADC sample rate(1MHz, 12b resolution, 2.5 cycles/sample) = 66666.67 Hz
+//	int n = 1024;
+//	complex_t* signal = allocate_complex_array(n);
+//
+//	// Test 1: Pure sine wave
+//	printf("Test 1: Pure Sine Wave (A4 = 440 Hz)\n");
+//	printf("------------------------------------\n");
+//
+//	for (int i = 0; i < n; i++) {
+//	  signal[i] = sin(2 * PI * 440 * i / sample_rate);
+//	}
+//
+//	pitch_result_t result = detect_pitch_with_confidence(signal, n, sample_rate);
+//	printf("Detected pitch: %.2f Hz\n", result.frequency);
+//	printf("Musical note: %s\n", result.note);
+//	printf("Confidence: %.1f%%\n\n", result.confidence * 100);
+//
+//	// Test 2: Complex tone with harmonics
+//	printf("Test 2: Complex Tone (E4 with harmonics)\n");
+//	printf("----------------------------------------\n");
+//
+//	double harmonic_amps[] = {1.0, 0.5, 0.3, 0.2, 0.1};
+//	generate_musical_note(signal, n, 329.63, sample_rate, 5, harmonic_amps);
+//
+//	result = detect_pitch_with_confidence(signal, n, sample_rate);
+//	printf("Detected pitch: %.2f Hz\n", result.frequency);
+//	printf("Musical note: %s\n", result.note);
+//	printf("Confidence: %.1f%%\n\n", result.confidence * 100);
+//
+//	// Test 3: Chord detection (challenging)
+//	printf("Test 3: C Major Chord (C4, E4, G4)\n");
+//	printf("-----------------------------------\n");
+//
+//	for (int i = 0; i < n; i++) {
+//	  signal[i] = sin(2 * PI * 261.63 * i / sample_rate) +  // C4
+//				 sin(2 * PI * 329.63 * i / sample_rate) +   // E4
+//				 sin(2 * PI * 392.00 * i / sample_rate);    // G4
+//	}
+//
+//	// Apply window to reduce spectral leakage
+//	apply_window_hann(signal, n);
+//
+//	result = detect_pitch_with_confidence(signal, n, sample_rate);
+//	printf("Detected pitch: %.2f Hz\n", result.frequency);
+//	printf("Musical note: %s\n", result.note);
+//	printf("Confidence: %.1f%%\n", result.confidence * 100);
+//	printf("(Note: Chord detection is challenging - usually detects root note)\n\n");
+//
+//	// Test 4: Noisy signal
+//	printf("Test 4: Noisy Signal (A4 with 20%% noise)\n");
+//	printf("-----------------------------------------\n");
+//
+//	for (int i = 0; i < n; i++) {
+//	  signal[i] = sin(2 * PI * 440 * i / sample_rate) +
+//				 0.2 * ((double)rand() / RAND_MAX - 0.5);
+//	}
+//
+//	result = detect_pitch_with_confidence(signal, n, sample_rate);
+//	printf("Detected pitch: %.2f Hz\n", result.frequency);
+//	printf("Musical note: %s\n", result.note);
+//	printf("Confidence: %.1f%%\n\n", result.confidence * 100);
+//
+//	free_complex_array(signal);
+//}
 
 #endif // TUNER_H
