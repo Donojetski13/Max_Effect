@@ -11,7 +11,7 @@
 
 
 
-/* Device Address 7-bit */
+/* Device Address 7-bit = 0x1A */
 #define WM8960_I2C_ADDR		0x1A
 
 
@@ -77,52 +77,50 @@
 #define WM8960_NGATETHRESHOLD   0x00 // -76.5dB
 #define WM8960_DACVOL           0xFF // 0dB
 #define WM8960_OUTVOL           0x79 // 0dB
-#define dB2INVAL(dB)            (int)((dB) / .75)
-#define dB2ADC_DACVAL(dB)       (int)((dB) / .5)
 #define dB2NGATEVAL(dB)         (int)((dB) / 1.5)
 
 /*
  * WM8960 Clock dividers
  */
-// #define WM8960_SYSCLKDIV 		0
-// #define WM8960_DACDIV			1
-// #define WM8960_OPCLKDIV			2
-// #define WM8960_DCLKDIV			3
-// #define WM8960_TOCLKSEL			4
+ #define WM8960_SYSCLKDIV 		0
+ #define WM8960_DACDIV			1
+ #define WM8960_OPCLKDIV			2
+ #define WM8960_DCLKDIV			3
+ #define WM8960_TOCLKSEL			4
 
-// #define WM8960_SYSCLK_DIV_1		(0 << 1)
-// #define WM8960_SYSCLK_DIV_2		(2 << 1)
+ #define WM8960_SYSCLK_DIV_1		(0 << 1)
+ #define WM8960_SYSCLK_DIV_2		(2 << 1)
 
-// #define WM8960_SYSCLK_MCLK		(0 << 0)
-// #define WM8960_SYSCLK_PLL		(1 << 0)
-// #define WM8960_SYSCLK_AUTO		(2 << 0)
+ #define WM8960_SYSCLK_MCLK		(0 << 0)
+ #define WM8960_SYSCLK_PLL		(1 << 0)
+ #define WM8960_SYSCLK_AUTO		(2 << 0)
 
-// #define WM8960_DAC_DIV_1		(0 << 3)
-// #define WM8960_DAC_DIV_1_5		(1 << 3)
-// #define WM8960_DAC_DIV_2		(2 << 3)
-// #define WM8960_DAC_DIV_3		(3 << 3)
-// #define WM8960_DAC_DIV_4		(4 << 3)
-// #define WM8960_DAC_DIV_5_5		(5 << 3)
-// #define WM8960_DAC_DIV_6		(6 << 3)
+ #define WM8960_DAC_DIV_1		(0 << 3)
+ #define WM8960_DAC_DIV_1_5		(1 << 3)
+ #define WM8960_DAC_DIV_2		(2 << 3)
+ #define WM8960_DAC_DIV_3		(3 << 3)
+ #define WM8960_DAC_DIV_4		(4 << 3)
+ #define WM8960_DAC_DIV_5_5		(5 << 3)
+ #define WM8960_DAC_DIV_6		(6 << 3)
 
-// #define WM8960_DCLK_DIV_1_5		(0 << 6)
-// #define WM8960_DCLK_DIV_2		(1 << 6)
-// #define WM8960_DCLK_DIV_3		(2 << 6)
-// #define WM8960_DCLK_DIV_4		(3 << 6)
-// #define WM8960_DCLK_DIV_6		(4 << 6)
-// #define WM8960_DCLK_DIV_8		(5 << 6)
-// #define WM8960_DCLK_DIV_12		(6 << 6)
-// #define WM8960_DCLK_DIV_16		(7 << 6)
+ #define WM8960_DCLK_DIV_1_5		(0 << 6)
+ #define WM8960_DCLK_DIV_2		(1 << 6)
+ #define WM8960_DCLK_DIV_3		(2 << 6)
+ #define WM8960_DCLK_DIV_4		(3 << 6)
+ #define WM8960_DCLK_DIV_6		(4 << 6)
+ #define WM8960_DCLK_DIV_8		(5 << 6)
+ #define WM8960_DCLK_DIV_12		(6 << 6)
+ #define WM8960_DCLK_DIV_16		(7 << 6)
 
-// #define WM8960_TOCLK_F19		(0 << 1)
-// #define WM8960_TOCLK_F21		(1 << 1)
+ #define WM8960_TOCLK_F19		(0 << 1)
+ #define WM8960_TOCLK_F21		(1 << 1)
 
-// #define WM8960_OPCLK_DIV_1		(0 << 0)
-// #define WM8960_OPCLK_DIV_2		(1 << 0)
-// #define WM8960_OPCLK_DIV_3		(2 << 0)
-// #define WM8960_OPCLK_DIV_4		(3 << 0)
-// #define WM8960_OPCLK_DIV_5_5	(4 << 0)
-// #define WM8960_OPCLK_DIV_6		(5 << 0)
+ #define WM8960_OPCLK_DIV_1		(0 << 0)
+ #define WM8960_OPCLK_DIV_2		(1 << 0)
+ #define WM8960_OPCLK_DIV_3		(2 << 0)
+ #define WM8960_OPCLK_DIV_4		(3 << 0)
+ #define WM8960_OPCLK_DIV_5_5	(4 << 0)
+ #define WM8960_OPCLK_DIV_6		(5 << 0)
 
 
 #endif
