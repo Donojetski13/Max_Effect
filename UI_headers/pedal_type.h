@@ -10,7 +10,7 @@ Contains effect types, parameters, and preset definitions
 #include <stdint.h>
 #include <stdbool.h>
 
-const int NUM_EFFECTS = 6; /*Number of effects supported by the pedal*/
+const uint8_t NUM_EFFECTS = 5; /*Number of effects supported by the pedal*/
 /*Audio effects supported by the pedal*/
 typedef enum{
    E_BYPASS,
@@ -23,70 +23,44 @@ typedef enum{
 
 /*Effect parameters. Settings vary by effect type*/
 typedef struct{
-   bool enabled;
-   float gain;
-   float setting1;
-   float setting2;
-   float setting3;
+	bool enable;
+	float* settings;
 } params;
 
-/*Distortion effect parameters*/
+// Effect chain struct
+typedef struct {
+    effect effect_type;
+    params effect_params;
+} effect_pair;
+
+/*Preset struct -> */
 typedef struct{
-   bool enabled;
+//   uint8_t preset_id; /*preset identifier if we have multiple presets*/
+	uint8_t length;		// chain length
+	effect_pair* chain;
+} Preset;
+/*
+Distortion effect parameters
    float gain;
    float tone;
    float level;
-} distortion_params;
 
-
-/*Reverb effect Parameters*/
-typedef struct{
-   bool enabled;
+Reverb effect Parameters
    float mix;
    float decay;
    float tone;
-} reverb_params;
 
-
-/*Delay effect parameters*/
-typedef struct{
-   bool enabled;
+Delay effect parameters
    float delay_ms;
    float feedback;
    float mix;
-} delay_params;
 
-
-/*Shift effect parameters*/
-typedef struct{
-   bool enabled;
+Shift effect parameters
    float shift;
-} pitch_params;
 
-
-/*Wah effect parameters*/
-typedef struct{
-   bool enabled;
+Wah effect parameters
    float frequency;
-   float resonance;
-} wah_params;
+*/
 
 
-/*Preset struct -> Ex. have 3 tabs and have 3 effects in preset -> each tab can activate one of the effects*/
-typedef struct{
-   uint8_t preset_id; /*preset identifier if we have multiple presets*/
-
-
-   distortion_params distortion;
-   reverb_params reverb;
-   delay_params delay;
-   pitch_params pitch;
-   wah_params wah;
-} preset;
-
-// Effect chain struct 
-typedef struct {
-    effect e;
-    params p;
-} effect_pair;
 #endif
