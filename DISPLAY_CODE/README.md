@@ -1,4 +1,4 @@
-Code for display. ui.h is main menu, ui_effects.h is effects page, ui_tuner.h for the tuner menu
+Code for display. ui.h is main menu, ui_effects.h is effects page, ui_tuner.h for the tuner menu. 
 Drop the lvgl-v9.6.0-lite folder into src/. It can be found here: https://drive.google.com/drive/folders/1Fcxl3y1AszxCB3g-uuLggd1KzUmn0cB4?usp=sharing
 
 ## Display and Rotary Encoder Pinout
