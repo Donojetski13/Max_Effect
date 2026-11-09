@@ -26,6 +26,41 @@ The 1.69" 240×280 TFT display uses SPI1 for communication with the STM32. LVGL 
 - PA4 (SPI1_NSS) and PA6 (SPI1_MISO) are configured but are not used by the current LCD driver.
 - Display power, ground, and backlight connections should be verified against the physical wiring.
 
+
+### SPI Clock Optimization
+
+To improve display refresh performance, the STM32 system clock and SPI1 clock were increased to allow faster transmission of pixel data to the ST7789 TFT display.
+
+**Original configuration:**
+- System clock: 4 MHz (MSI)
+- SPI1 prescaler: /2
+- SPI1 clock: 2 MHz
+
+**Updated configuration:**
+- System clock: 80 MHz (HSI + PLL)
+- SPI1 prescaler: /4
+- SPI1 clock: 20 MHz
+
+The updated SPI clock is calculated as:
+
+SPI1 Clock = 80 MHz / 4 = 20 MHz
+
+The system clock was configured using the PLL with:
+- PLLM = /1
+- PLLN = ×10
+- PLLR = /2
+- APB2 prescaler = /1
+
+**Benefits:**
+- Increased theoretical SPI data throughput by 10×.
+- Reduced the time required to transmit display pixel data.
+- Improved responsiveness of LVGL menus, animations, and parameter updates.
+- Maintained the existing SPI display driver without requiring changes to `lcd.c`.
+
+SPI transfers continue to use `HAL_SPI_Transmit()` with the updated SPI1 peripheral configuration.
+
+
+
 ### Rotary Encoder with Pushbutton
 
 The rotary encoder uses TIM1 in hardware quadrature encoder mode for detecting rotation. Its integrated pushbutton uses a GPIO external interrupt.
