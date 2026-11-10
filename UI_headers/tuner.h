@@ -28,7 +28,7 @@ musical_note notes[] = {
 int num_notes = sizeof(notes) / sizeof(notes[0]);
 
 // Find closest musical note
-const char* frequency_to_note_name(double freq) {
+const char* frequency_to_note_name(double freq, double *cents_out) {
     int closest_idx = 0;
     double min_cents = 1200;  // Max cents difference
 
@@ -40,15 +40,19 @@ const char* frequency_to_note_name(double freq) {
         }
     }
 
-    static char result[32];
-    if (fabs(min_cents) < 1) {
-        snprintf(result, sizeof(result), "%s (in tune)\n", notes[closest_idx].name);
-    } else {
-        snprintf(result, sizeof(result), "%s (%+.0f cents)\n",
-                notes[closest_idx].name, min_cents);
+    if(cents_out != NULL){
+    	*cents_out = min_cents;
     }
 
-    return result;
+    static char result[32];
+    if (fabs(min_cents) < 1) {
+        //snprintf(result, sizeof(result), "%s (in tune)\n", notes[closest_idx].name);
+    } else {
+        //snprintf(result, sizeof(result), "%s (%+.0f cents)\n",
+                //notes[closest_idx].name, min_cents);
+    }
+
+    return notes[closest_idx].name;
 }
 
 // Window functions for spectral analysis
