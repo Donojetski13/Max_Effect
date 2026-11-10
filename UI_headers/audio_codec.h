@@ -37,6 +37,7 @@ bool codec_init_WM8960() {
     uint8_t data_buf[2];
     uint8_t dBs = 0; // decebels to add on top of defualt
     bool mute_on = true;
+    bool speakers = true;
 
     // reset old values
 	data_buf[0] = (WM8960_RESET << 1) + 0; // reset values bit 8 doesn't matter
@@ -138,7 +139,7 @@ bool codec_init_WM8960() {
     // Output path settings
     // DAC enable and volume
     data_buf[0] = (WM8960_POWER2 << 1) + 1; // reg address + bit 8(left DAC on) //********//
-    data_buf[1] = 0xE0; // right DAC on, both right & left output buffers on,(SPKR and SPKL on)(Out3 & PLL off)
+    data_buf[1] = speakers? 0x98: 0xE0; // right DAC on, both right & left output buffers on,(SPKR and SPKL on)(Out3 & PLL off)
     /* send data via HAL I2C at addr (in 8bit format)*/
     ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
     if (ret != HAL_OK) return false;
@@ -196,7 +197,7 @@ bool codec_init_WM8960() {
 
     // headphones and speaker output enable
     data_buf[0] = (WM8960_CLASSD1 << 1) + 0; // reg address + bit 8
-    data_buf[1] = 0x37; // both speakers off        //********//
+    data_buf[1] = speakers? 0xF7: 0x37; // both speakers off        //********//
     /* send data via HAL I2C at addr (in 8bit format)*/
     ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
     if (ret != HAL_OK) return false;
@@ -266,7 +267,7 @@ bool codec_set_intput_gain(int gain) {
     /* send data via HAL I2C at addr (in 8bit format)*/
     ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
     if (ret != HAL_OK) return false;
-    printf("%d dBs (input)\n", gain);
+//    printf("%d dBs (input)\n", gain);
     return true;
 }
 
@@ -278,7 +279,7 @@ bool codec_set_ADC_gain(int gain) {
     /* send data via HAL I2C at addr (in 8bit format)*/
     ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
     if (ret != HAL_OK) return false;
-    printf("%d dBs (ADC)\n", gain);
+//    printf("%d dBs (ADC)\n", gain);
     return true;
 }
 /*Set  output DAC gain */
@@ -289,7 +290,7 @@ bool codec_set_DAC_gain(int gain) {
     /* send data via HAL I2C at addr (in 8bit format)*/
     ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
     if (ret != HAL_OK) return false;
-    printf("%d dBs (DAC)\n", gain);
+//    printf("%d dBs (DAC)\n", gain);
     return true;
 }
 
@@ -317,7 +318,7 @@ bool codec_set_output_gain(int gain) {
     /* send data via HAL I2C at addr (in 8bit format)*/
     ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
     if (ret != HAL_OK) return false;
-    printf("%d dBs (output)\n", (gain));
+//    printf("%d dBs (output)\n", (gain));
     return true;
 }
 /*************************** I2S Stuff ********************/
@@ -429,7 +430,7 @@ void get_input_MCU_signal(int16_t* signal, int n) {
     for (int i = 0; i < n; i++) {
          HAL_ADC_Start(&hadc1);
          HAL_ADC_PollForConversion(&hadc1, 1);
-         signal[i] = HAL_ADC_GetValue(&hadc1); // Already generated as real values
+         signal[i] = ((int32_t)HAL_ADC_GetValue(&hadc1) - 2048) << 4; // Convert 12 unsigned to signed 16
     }
 }
 #endif
