@@ -94,7 +94,7 @@ bool codec_init_WM8960() {
 
 	// set master clock settings
 	data_buf[0] = (WM8960_CLOCK2 << 1) + 1; // reg address + bit 8
-	data_buf[1] = 0xC7; // DCLKDIV stays 111, BCLKDIV=0100 -> BCLK = 12 MHz / 4 = 3 MHz = 64 x 46.875 kHz
+	data_buf[1] = 0xC7; // DCLKDIV stays 111, BCLKDIV=0111 -> BCLK = 12 MHz / 8 = 1.5 MHz = 32 x 46.875 kHz
 	/* send data via HAL I2C at addr (in 8bit format)*/
 	ret = HAL_I2C_Master_Transmit(&hi2c2, (WM8960_I2C_ADDR << 1), data_buf, 2, HAL_MAX_DELAY);
 	if (ret != HAL_OK) return false;
@@ -339,27 +339,51 @@ static inline int16_t sat16(double v) {
     return (v > 32767.0) ? 32767 : (v < -32768.0) ? -32768 : (int16_t)v;
 }
 
+static void tx_fill(int16_t *dst);
+
 bool audio_start(void) {
     memset(tx_buf, 0, sizeof tx_buf);
     memset(rx_buf, 0, sizeof rx_buf);
-    if (HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t*)rx_buf, FRAMES * 2 * 2) != HAL_OK) return false;   // Codec first
-    if (HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*)tx_buf, FRAMES * 2 * 2) != HAL_OK) return false;  // master starts the clocks
+#ifdef MCU_ADC_DMA
+    /* Prefill both DMA halves from captured data before starting playback.
+     * Codec RX is unnecessary when the source is the STM32 ADC. */
+    tx_fill(&tx_buf[0]);
+    tx_fill(&tx_buf[FRAMES * 2]);
+    audio_adc_playing = true;
+#else
+    if (HAL_SAI_Receive_DMA(&hsai_BlockB1, (uint8_t*)rx_buf, FRAMES * 2 * 2) != HAL_OK) return false;
+#endif
+    if (HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t*)tx_buf, FRAMES * 2 * 2) != HAL_OK) {
+#ifdef MCU_ADC_DMA
+        audio_adc_playing = false;
+#endif
+        return false;
+    }
     return true;
 }
 
 void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *h) {
-    printf("SAI error 0x%lx\n", (unsigned long)HAL_SAI_GetError(h));
+#ifdef MCU_ADC_DMA
+    /* No blocking UART in an IRQ. Main stops capture on the next wakeup. */
+    audio_timing_stats.sai_error = HAL_SAI_GetError(h);
+#else
+    (void)h;
+#endif
 }
 
 // TX: ring -> DMA buffer
 static void tx_fill(int16_t *dst) {
     for (int i = 0; i < FRAMES; i++) {
-    	int16_t s = (tx_rd != tx_wr) ? tx_ring[tx_rd++ & RING_MASK] : 0;   // underrun -> silence
+#ifdef MCU_ADC_DMA
+        int16_t s = adc_audio_sample();
+#else
+        int16_t s = (tx_rd != tx_wr) ? tx_ring[tx_rd++ & RING_MASK] : 0;
+#endif
 		dst[2*i] = dst[2*i + 1] = s;                      // mono -> L and R
     }
 }
-void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *h) { tx_fill(&tx_buf[0]); }
-void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *h)     { tx_fill(&tx_buf[FRAMES * 2]); }
+void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *h) { if (h == &hsai_BlockA1) tx_fill(&tx_buf[0]); }
+void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *h)     { if (h == &hsai_BlockA1) tx_fill(&tx_buf[FRAMES * 2]); }
 
 // RX: DMA buffer -> ring (one slot per frame)
 static void rx_drain(const int16_t *src) {
@@ -368,8 +392,8 @@ static void rx_drain(const int16_t *src) {
             rx_ring[rx_wr++ & RING_MASK] = src[2*i];
     }
 }
-void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *h) { rx_drain(&rx_buf[0]); }
-void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *h)     { rx_drain(&rx_buf[FRAMES * 2]); }
+void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *h) { if (h == &hsai_BlockB1) rx_drain(&rx_buf[0]); }
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *h)     { if (h == &hsai_BlockB1) rx_drain(&rx_buf[FRAMES * 2]); }
 
 // returns true if n samples were read (waits up to 10 ms)
 bool input_from_codec(int16_t *signal, int n) {
@@ -430,7 +454,7 @@ void get_input_MCU_signal(int16_t* signal, int n) {
     for (int i = 0; i < n; i++) {
          HAL_ADC_Start(&hadc1);
          HAL_ADC_PollForConversion(&hadc1, 1);
-         signal[i] = ((int32_t)HAL_ADC_GetValue(&hadc1) - 2048) << 4; // Convert 12 unsigned to signed 16
+         signal[i] = (int16_t)(((int32_t)HAL_ADC_GetValue(&hadc1) - 2048) * 16); // Convert 12 unsigned to signed 16
     }
 }
 #endif

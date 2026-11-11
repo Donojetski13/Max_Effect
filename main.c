@@ -27,6 +27,8 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "UI_headers/tuner.h"
+#define MCU_ADC_DMA
+#include "UI_headers/adc_audio.h"
 #include "UI_headers/pedal_effect.h"
 /* USER CODE END Includes */
 
@@ -45,6 +47,10 @@
 // #define SCREEN
 #define CODEC
 //#define FILTER
+
+#if defined(MCU_ADC_DMA) && (!defined(CODEC) || defined(FILTER) || defined(PEDAL_EFFECTS) || defined(TUNER))
+#error "ADC DMA passthrough owns the audio stream; disable other test modes."
+#endif
 
 /* USER CODE END PD */
 
@@ -170,7 +176,12 @@ int main(void)
   HAL_GPIO_Init(GPIOE, &g);                                    // restore the SAI function
 #endif
 
+  if (!adc_audio_start()) {
+      printf("ADC timer/DMA initialization failed!\n");
+      Error_Handler();
+  }
   if (!audio_start()){
+      adc_audio_stop();
   	  printf("DMA initialization failed!\n");
   	  return -1;
     }
@@ -226,14 +237,13 @@ int main(void)
 	  output2codec(effect_signal, n_effects);
 	  #endif
 	  #ifdef CODEC
-	  // Get input signal from ADC
-//	  printf("\nGetting signal...\n");
-//	  if(!input_from_codec(effect_signal, n_effects))
-//		  continue;
-	  get_input_MCU_signal(effect_signal, n_effects);
-	  // send signal to codec for output (testing no effects latency)
-//	  printf("\nOutputting signal...\n");
-	  output2codec(effect_signal, n_effects);
+          /* ADC DMA -> signed PCM FIFO -> SAI DMA runs in callbacks.
+           * Inspect audio_timing_stats here; no polled ADC or block writes. */
+          if (audio_timing_stats.adc_error || audio_timing_stats.sai_error) {
+              adc_audio_stop();
+              Error_Handler();
+          }
+          __WFI();
 	  #endif
 #ifdef FILTER
 	  // If an event or user changes a setting, simply call update_my_filter again!
